@@ -1,0 +1,120 @@
+```lua
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local ESP = {
+    playerESPs = {},
+    updateInterval = 0.1,
+    teamCheck = false,
+    friendlyColor = Color3.fromRGB(0, 255, 0),
+    enemyColor = Color3.fromRGB(255, 0, 0),
+    textColor = Color3.fromRGB(255, 255, 255),
+    boxColor = Color3.fromRGB(0, 0, 0),
+    size = Vector2.new(100, 50),
+}
+
+local function createESP(player)
+    local playerESP = Instance.new("BillboardGui")
+    playerESP.Name = "ESP"
+    playerESP.Parent = player
+    playerESP.AlwaysOnTop = true
+    playerESP.Active = true
+
+    local updateFunction = function()
+        ESP:updateESP(playerESP)
+    end
+
+    ESP.connection = RunService.Stepped:Connect(updateFunction)
+
+    table.insert(ESP.playerESPs, {player = player, esp = playerESP})
+end
+
+local function updateESP(playerESP)
+    local player = playerESP.Parent
+    local character = player.Character
+    local head = character.Head
+
+    if not head then
+        return
+    end
+
+    local box = Instance.new("BoxHandleAdornment")
+    box.Name = "Box"
+    box.Parent = playerESP
+    box.Adornee = head
+    box.AlwaysOnTop = true
+    box.Color3 = ESP.boxColor
+    box.Size = ESP.size
+    box.Transparency = 0.5
+
+    local text = Instance.new("TextLabel")
+    text.Parent = playerESP
+    text.BackgroundTransparency = 1
+    text.Text = player.Name
+    text.TextColor3 = ESP.textColor
+    text.TextSize = 20
+    text.Position = UDim2.new(0, -text.TextBounds.X / 2, 0, 10)
+
+    if ESP.teamCheck then
+        local localPlayerTeam = Players.LocalPlayer.Team
+        local playerTeam = player.Team
+
+        if localPlayerTeam == playerTeam then
+            text.TextColor3 = ESP.friendlyColor
+            box.Color3 = ESP.friendlyColor
+        else
+            text.TextColor3 = ESP.enemyColor
+            box.Color3 = ESP.enemyColor
+        end
+    end
+end
+
+Players.PlayerAdded:Connect(createESP)
+
+local function updateSettings()
+    for _, espData in ipairs(ESP.playerESPs) do
+        local playerESP = espData.esp
+        local player = espData.player
+
+        if playerESP and player then
+            local character = player.Character
+            local head = character.Head
+
+            if head then
+                playerESP.Adornee = head
+            end
+
+            updateESP(playerESP)
+        end
+    end
+end
+
+local function obfuscateCode()
+    for _, espData in ipairs(ESP.playerESPs) do
+        local playerESP = espData.esp
+        local connection = espData.connection
+
+        playerESP.Parent = nil
+        connection:Disconnect()
+
+        ESP:createESP(espData.player)
+    end
+
+    -- Randomize the order of the playerESPs every 10 seconds to make it harder to detect
+    local function randomizePlayerESPs()
+        local sortedPlayers = table.deepcopy(ESP.playerESPs)
+        table.shuffle(sortedPlayers)
+        ESP.playerESPs = sortedPlayers
+    end
+
+    randomizePlayerESPs()
+    RunService.Heartbeat:Connect(function()
+        if math.random() < 0.1 then
+            randomizePlayerESPs()
+        end
+    end)
+end
+
+RunService.Heartbeat:Connect(updateSettings)
+RunService.Heartbeat:Connect(obfuscateCode)
+```
